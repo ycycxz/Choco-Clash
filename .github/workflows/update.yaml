@@ -1,0 +1,128 @@
+name: Backup
+on:
+  schedule:
+    - cron: "4 23 * * 0"
+  push:
+    branches:
+      - main
+
+jobs:
+  Update:
+    name: Update
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+         token: '${{ github.token }}'
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 0
+          keep_minimum_runs: 0
+
+      - name: Update
+        run: |
+          rm -fr * .git .github
+          clash_version=$(curl -sL https://data.jsdelivr.com/v1/packages/gh/MetaCubeX/mihomo/resolved  | jq -r .version)
+          check_sha256=$(wget -q -O - https://github.com/MetaCubeX/mihomo/releases/download/v$clash_version/mihomo-windows-amd64-compatible-v${clash_version}.zip | sha256sum | cut -d " " -f1)
+          echo Clash $clash_version $check_sha256
+          echo ====================
+
+          mkdir -p ./clash/tools
+
+          #chocolateyinstall.ps1
+
+          cat <<EOF > ./clash/tools/chocolateyinstall.ps1
+          \$ErrorActionPreference = 'Stop';
+
+          \$toolsDir = "\$(Get-ToolsLocation)\\\$env:ChocolateyPackageName"
+
+          \$url64 = 'https://github.com/MetaCubeX/mihomo/releases/download/v$clash_version/mihomo-windows-amd64-compatible-v${clash_version}.zip'
+          
+          \$sha256 = "$check_sha256"
+
+          Install-ChocolateyZipPackage \$packageName \$url64 -checksum64 \$checksum64 -UnzipLocation \$toolsDir
+
+          \$exePath = Join-Path \$toolsDir 'mihomo-windows-amd64-compatible.exe'
+          
+          \$newExePath = Join-Path \$toolsDir "\$env:ChocolateyPackageName.exe"
+          
+          Rename-Item -Path \$exePath -NewName "\$env:ChocolateyPackageName.exe"
+          
+          Install-BinFile -Name \$env:ChocolateyPackageName -Path \$newExePath
+          EOF
+
+          #chocolateybeforemodify.ps1
+          cat <<EOF > ./clash/tools/chocolateybeforemodify.ps1
+          \$ErrorActionPreference = 'Stop'
+
+          Get-Process -Name 'clash' -ErrorAction SilentlyContinue | Stop-Process
+          EOF
+
+          cat ./clash/tools/chocolateybeforemodify.ps1
+          
+          cat <<EOF > ./clash/tools/chocolateyuninstall.ps1
+          \$ErrorActionPreference = 'Stop'
+          
+          Remove-Item -Recurse "\$(Get-ToolsLocation)\\\$env:ChocolateyPackageName"  -Force
+          EOF
+
+          cat ./clash/tools/chocolateyuninstall.ps1
+          
+          cat <<EOF > ./clash/clash.nuspec
+          <?xml version="1.0" encoding="utf-8"?>
+          <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+            <metadata>
+              <id>clash</id>
+              <version>$clash_version</version>
+              <owners>Mainians</owners>
+              <title>clash core, formally known as Clash-Meta.</title>
+              <authors>clash AUTHORS</authors>
+              <licenseUrl>https://github.com/MetaCubeX/mihomo/blob/main/LICENSE</licenseUrl>
+              <projectUrl>https://github.com/MetaCubeX/mihomo</projectUrl>
+              <iconUrl>https://cdn.jsdelivr.net/gh/MetaCubeX/mihomo@Meta/docs/logo.png</iconUrl>
+              <requireLicenseAcceptance>false</requireLicenseAcceptance>
+              <projectSourceUrl>https://github.com/MetaCubeX/mihomo/</projectSourceUrl>
+              <docsUrl>https://github.com/MetaCubeX/mihomo/wiki</docsUrl>
+              <mailingListUrl>https://github.com/MetaCubeX/mihomo/discussions</mailingListUrl>
+              <bugTrackerUrl>https://github.com/MetaCubeX/mihomo/issues</bugTrackerUrl>
+              <tags>Clash Meta</tags>
+              <summary>A Clash Core, formally known as Clash-Meta.</summary>
+              <description>A Clash Core, formally known as Clash-Meta.</description>
+              <releaseNotes>https://github.com/MetaCubeX/mihomo/releases</releaseNotes>
+              <packageSourceUrl>https://github.com/ycycxz/Choco-Clash</packageSourceUrl>
+            </metadata>
+            <files>
+              <file src="tools\**" target="tools" />
+            </files>
+          </package>
+          EOF
+
+          cat ./clash/clash.nuspec
+
+          mkdir -p .github/workflows
+          wget -qO .github/workflows/update.yaml https://github.com/${{ github.repository }}/raw/main/.github/workflows/update.yaml &> /dev/null
+
+          git config --global init.defaultBranch main
+          git init
+          git add .
+          git config user.name "ycycxz"
+          git config user.email "61817665+ycycxz@users.noreply.github.com"
+          git commit -m "$clash_version"
+          git remote add release "https://${{github.actor}}:${{secrets.GITHUB_TOKEN}}@github.com/${{github.repository}}"
+          git push -u release main -f
+  Cpack:
+    name: Cpack
+    needs: Update
+    runs-on: windows-latest
+    steps:
+      - name: Cpack
+        run: |
+          git clone https://github.com/${{github.repository}} Clash
+          cd Clash/Clash
+          choco apikey --key ${{secrets.api_key}} --source https://push.chocolatey.org/
+          choco pack
+          choco push --source https://push.chocolatey.org/ || true

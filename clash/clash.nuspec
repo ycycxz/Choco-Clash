@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>clash</id>
+    <version>1.19.3</version>
+    <owners>Mainians</owners>
+    <title>clash core, formally known as Clash-Meta.</title>
+    <authors>clash AUTHORS</authors>
+    <licenseUrl>https://github.com/MetaCubeX/mihomo/blob/main/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/MetaCubeX/mihomo</projectUrl>
+    <iconUrl>https://cdn.jsdelivr.net/gh/MetaCubeX/mihomo@Meta/docs/logo.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/MetaCubeX/mihomo/</projectSourceUrl>
+    <docsUrl>https://github.com/MetaCubeX/mihomo/wiki</docsUrl>
+    <mailingListUrl>https://github.com/MetaCubeX/mihomo/discussions</mailingListUrl>
+    <bugTrackerUrl>https://github.com/MetaCubeX/mihomo/issues</bugTrackerUrl>
+    <tags>Clash Meta</tags>
+    <summary>A Clash Core, formally known as Clash-Meta.</summary>
+    <description>A Clash Core, formally known as Clash-Meta.</description>
+    <releaseNotes>https://github.com/MetaCubeX/mihomo/releases</releaseNotes>
+    <packageSourceUrl>https://github.com/ycycxz/Choco-Clash</packageSourceUrl>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
